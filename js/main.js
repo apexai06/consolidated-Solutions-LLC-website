@@ -247,110 +247,81 @@ const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)
 // ── Contact Form ───────────────────────────────────────────────────────────
 
 (function initContactForm() {
-  const form = document.getElementById('contact-form');
-  if (!form) return;
+  // Initialize Formspree AJAX SDK — delivers to eisen@consolidatedsolutionsng.org
+  // Endpoint: https://formspree.io/f/mykbrvjv
+  window.formspree = window.formspree || function () {
+    (formspree.q = formspree.q || []).push(arguments);
+  };
 
-  form.addEventListener('submit', function(e) {
-    e.preventDefault();
+  // Wait for the Formspree SDK to load, then initialize
+  function tryInit() {
+    if (typeof formspree === 'function' && formspree.initForm) {
+      formspree('initForm', {
+        formElement: '#contact-form',
+        formId: 'mykbrvjv'
+      });
+    } else {
+      // Fallback: manual fetch if SDK not loaded
+      const form = document.getElementById('contact-form');
+      if (!form) return;
 
-    const submitBtn = form.querySelector('button[type="submit"]');
-    const originalText = submitBtn ? submitBtn.textContent : '';
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const submitBtn = form.querySelector('[data-fs-submit-btn]');
+        const successEl = document.querySelector('[data-fs-success]');
+        const errorEl = document.querySelector('[data-fs-error]:not([data-fs-error=""])');
 
-    // Basic validation
-    const required = form.querySelectorAll('[required]');
-    let valid = true;
-
-    required.forEach(field => {
-      if (!field.value.trim()) {
-        valid = false;
-        field.style.borderColor = '#e53e3e';
-        field.setAttribute('aria-invalid', 'true');
-      } else {
-        field.style.borderColor = '';
-        field.setAttribute('aria-invalid', 'false');
-      }
-    });
-
-    if (!valid) {
-      const firstInvalid = form.querySelector('[aria-invalid="true"]');
-      if (firstInvalid) firstInvalid.focus();
-      return;
-    }
-
-    // Submit to Formspree — delivers to eisen@consolidatedsolutionsng.org
-    const FORMSPREE_ENDPOINT = 'https://formspree.io/f/xzzbnwrq';
-
-    if (submitBtn) {
-      submitBtn.textContent = 'Sending...';
-      submitBtn.disabled = true;
-    }
-
-    const formData = new FormData(form);
-
-    fetch(FORMSPREE_ENDPOINT, {
-      method: 'POST',
-      body: formData,
-      headers: { 'Accept': 'application/json' }
-    })
-    .then(function(response) {
-      if (response.ok) {
-        if (submitBtn) {
-          submitBtn.textContent = 'Message Sent ✓';
-          submitBtn.style.backgroundColor = '#2d6a4f';
-          submitBtn.style.borderColor = '#2d6a4f';
-        }
-        setTimeout(function() {
-          form.reset();
-          if (submitBtn) {
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-            submitBtn.style.backgroundColor = '';
-            submitBtn.style.borderColor = '';
+        const required = form.querySelectorAll('[required]');
+        let valid = true;
+        required.forEach(function(field) {
+          if (!field.value.trim()) {
+            valid = false;
+            field.style.borderColor = '#e53e3e';
+            field.setAttribute('aria-invalid', 'true');
+          } else {
+            field.style.borderColor = '';
+            field.setAttribute('aria-invalid', 'false');
           }
-        }, 3000);
-      } else {
-        return response.json().then(function(data) {
-          throw new Error(data.error || 'Submission failed');
         });
-      }
-    })
-    .catch(function(error) {
-      console.error('Form error:', error);
-      if (submitBtn) {
-        submitBtn.textContent = 'Error — Please Try Again';
-        submitBtn.style.backgroundColor = '#e53e3e';
-        submitBtn.style.borderColor = '#e53e3e';
-        submitBtn.disabled = false;
-      }
-      setTimeout(function() {
-        if (submitBtn) {
-          submitBtn.textContent = originalText;
-          submitBtn.style.backgroundColor = '';
-          submitBtn.style.borderColor = '';
+        if (!valid) {
+          const firstInvalid = form.querySelector('[aria-invalid="true"]');
+          if (firstInvalid) firstInvalid.focus();
+          return;
         }
-      }, 3000);
-    });
-  });
 
-  // Live validation feedback
-  form.querySelectorAll('[required]').forEach(field => {
-    field.addEventListener('blur', function() {
-      if (!this.value.trim()) {
-        this.style.borderColor = '#e53e3e';
-        this.setAttribute('aria-invalid', 'true');
-      } else {
-        this.style.borderColor = 'rgba(201, 162, 39, 0.4)';
-        this.setAttribute('aria-invalid', 'false');
-      }
-    });
+        if (submitBtn) { submitBtn.textContent = 'Sending...'; submitBtn.disabled = true; }
 
-    field.addEventListener('input', function() {
-      if (this.value.trim()) {
-        this.style.borderColor = '';
-        this.setAttribute('aria-invalid', 'false');
-      }
-    });
-  });
+        fetch('https://formspree.io/f/mykbrvjv', {
+          method: 'POST',
+          body: new FormData(form),
+          headers: { 'Accept': 'application/json' }
+        })
+        .then(function(res) {
+          if (res.ok) {
+            form.style.display = 'none';
+            if (successEl) {
+              successEl.classList.remove('hidden');
+            }
+          } else {
+            return res.json().then(function(data) { throw new Error(data.error || 'Submission failed'); });
+          }
+        })
+        .catch(function(err) {
+          console.error('Form error:', err);
+          const formErrorEl = document.querySelector('[data-fs-error].hidden');
+          if (formErrorEl) {
+            formErrorEl.textContent = 'There was an error sending your message. Please try again or email us directly.';
+            formErrorEl.classList.remove('hidden');
+          }
+          if (submitBtn) { submitBtn.textContent = 'Send Message'; submitBtn.disabled = false; }
+        });
+      });
+    }
+  }
+
+  // Try immediately, then after SDK loads
+  tryInit();
+  window.addEventListener('load', tryInit);
 })();
 
 // ── Footer Year ────────────────────────────────────────────────────────────
