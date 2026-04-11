@@ -277,30 +277,59 @@ const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)
       return;
     }
 
-    // Simulate form submission (replace with actual endpoint)
+    // Submit to Formspree — delivers to eisen@consolidatedsolutionsng.org
+    const FORMSPREE_ENDPOINT = 'https://formspree.io/f/xzzbnwrq';
+
     if (submitBtn) {
       submitBtn.textContent = 'Sending...';
       submitBtn.disabled = true;
     }
 
-    setTimeout(function() {
-      if (submitBtn) {
-        submitBtn.textContent = 'Message Sent ✓';
-        submitBtn.style.backgroundColor = '#2d6a4f';
-        submitBtn.style.borderColor = '#2d6a4f';
-      }
+    const formData = new FormData(form);
 
-      // Reset after 3 seconds
+    fetch(FORMSPREE_ENDPOINT, {
+      method: 'POST',
+      body: formData,
+      headers: { 'Accept': 'application/json' }
+    })
+    .then(function(response) {
+      if (response.ok) {
+        if (submitBtn) {
+          submitBtn.textContent = 'Message Sent ✓';
+          submitBtn.style.backgroundColor = '#2d6a4f';
+          submitBtn.style.borderColor = '#2d6a4f';
+        }
+        setTimeout(function() {
+          form.reset();
+          if (submitBtn) {
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+            submitBtn.style.backgroundColor = '';
+            submitBtn.style.borderColor = '';
+          }
+        }, 3000);
+      } else {
+        return response.json().then(function(data) {
+          throw new Error(data.error || 'Submission failed');
+        });
+      }
+    })
+    .catch(function(error) {
+      console.error('Form error:', error);
+      if (submitBtn) {
+        submitBtn.textContent = 'Error — Please Try Again';
+        submitBtn.style.backgroundColor = '#e53e3e';
+        submitBtn.style.borderColor = '#e53e3e';
+        submitBtn.disabled = false;
+      }
       setTimeout(function() {
-        form.reset();
         if (submitBtn) {
           submitBtn.textContent = originalText;
-          submitBtn.disabled = false;
           submitBtn.style.backgroundColor = '';
           submitBtn.style.borderColor = '';
         }
       }, 3000);
-    }, 1200);
+    });
   });
 
   // Live validation feedback
