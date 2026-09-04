@@ -244,6 +244,27 @@ const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)
   });
 })();
 
+// ── Logistics Venture: Card Redirect ───────────────────────────────────────
+(function initLogisticsRedirect() {
+  const card = document.querySelector('.logistics-card[data-external-url]');
+  if (!card) return;
+
+  const destination = card.dataset.externalUrl;
+  const goToIcend = () => window.open(destination, '_blank', 'noopener,noreferrer');
+
+  card.addEventListener('click', (event) => {
+    if (event.target.closest('a')) return;
+    goToIcend();
+  });
+
+  card.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      goToIcend();
+    }
+  });
+})();
+
 // ── Contact Form ───────────────────────────────────────────────────────────
 
 (function initContactForm() {
